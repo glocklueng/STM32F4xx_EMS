@@ -73,7 +73,6 @@ extern bool IsWIFIJoinResponsed ;
 void DBGU_Init(void);
 bool DBGU_RxBufferEmpty(void);
 uint8_t DBGU_GetChar(void);
-void ShowMenu(void);
 void ProcessUserInput(void);
 int sendHttpReqTest(char *domain, char isHttps);
 int sendHttpPostDemo(char *domain);
@@ -105,13 +104,8 @@ int main(void)
     strcpy(domain, "www.murata-ws.com");
     strcpy(uri, "/index.html");
 
-    printf("\n\rHello, Embedded World!\n\r");
-    printf("\n\r");
-
     WifiOn(seqNo++);
     printf("\n\r");
-    
-    ShowMenu();
 
     /* Infinite loop */
     while (1) {
@@ -126,8 +120,6 @@ int main(void)
         if(quit_flag)
             break;
     }
-
-    printf("\n\rGoodbye, Embedded World!\n\r");
 }
 
 void DBGU_Init(void)
@@ -269,67 +261,38 @@ int fgetc(FILE *f)
     return ch;
 }
 
-
-
-void ShowMenu(void)
-{
-    printf("---------------------\n\r");
-    printf("0 Get WiFi status\n\r");
-    printf("1 Wifi Scan\n\r");
-    printf("2 Wifi Join\n\r");
-    printf("3 Get IP\n\r");
-    printf("4 TCP client\n\r");
-    printf("5 TCP sever\n\r");
-    printf("6 Send from sock\n\r");
-    printf("7 WiFi Leave\n\r");
-    printf("8 AP On/Off\n\r");
-    printf("9 UDP client\n\r");
-    printf("a UDP server\n\r");
-    printf("b Wifi Off\n\r");
-    printf("c Wifi On\n\r");
-    printf("d HTTP get req\n\r");
-    printf("e HTTP post req\n\r");
-    printf("f HTTP post Json req\n\r");
-    printf("g HTTP chunked post req\n\r");
-    printf("h HTTPS get req\n\r");
-    printf("i TLS client\n\r");
-    printf("j TLS server (HTTPS server)\n\r");
-    printf("m: Show Menu\n\r");
-    printf("q: press q to Quit \n\r");
-    printf("---------------------\n\r");
-}
-
 void ProcessUserInput(void)
 {
     char tmp[100];
     //key = DBGU_GetChar();
-    scanf("%c", &key);
-    printf("\n\r");
+    //scanf("%c", &key);
+    //printf("\n\r");
 
     if (key == 'q')
         quit_flag = true;
 
     switch(key) {
+	  //0 Get WiFi status
     case '0':
         GetStatus(seqNo++);
         break;
-
+    //1 Wifi Scan
     case '1':
         WifiScan(seqNo++);
         break;
-
+    //2 Wifi Join
     case '2':
         WifiDisconn(seqNo++);
         WifiJoin(seqNo++);
         SnicInit(seqNo++);
         SnicIPConfig(seqNo++);
         break;
-
+    //3 Get IP
     case '3':
         SnicInit(seqNo++);
         SnicGetDhcp(seqNo++);
         break;
-
+    //4 TCP client
     case '4':
         mysock = -1;
         tcpCreateSocket(0, 0xFF, 0xFF, seqNo++, SNIC_TCP_CREATE_SOCKET_REQ);
@@ -342,7 +305,7 @@ void ProcessUserInput(void)
             tcpConnectToServer(mysock, destIP, (unsigned short)destPort, 0x0400, 0x5, seqNo++);
         }
         break;
-
+    //5 TCP sever
     case '5':
         if (setTCPinfo() == CMD_ERROR) {
             printf("Invalid Server to create\n\r");
@@ -355,7 +318,7 @@ void ProcessUserInput(void)
             tcpCreateConnection(mysock, TEST_BUFFERSIZE, 0x5, seqNo++);
         }
         break;
-
+    //6 Send from sock
     case '6': {
         char tempstr[2] = {0};
         int8u datamode;
@@ -383,16 +346,16 @@ void ProcessUserInput(void)
         }
         break;
     }
-
+    //7 WiFi Leave
     case '7':
         SnicCleanup(seqNo++);
         WifiDisconn(seqNo++);
         break;
-
+    //8 AP On/Off
     case '8':
         ApOnOff(seqNo++);
         break;
-
+    //9 UDP client
     case '9': {//udp send
         int i;
         udpCreateSocket(0, 0, 0, seqNo++);
@@ -412,7 +375,7 @@ void ProcessUserInput(void)
         }
         break;
     }
-
+    //a UDP server
     case 'a': {//udp recv
         int16u port = 43211;
         int32u ip = 0xAC1F0001; // 172.31.0.1
@@ -420,16 +383,16 @@ void ProcessUserInput(void)
         udpStartRecv(mysock, 2048, seqNo++);
         break;
     }
-
+    //b Wifi Off
     case 'b':
         SnicCleanup(seqNo++);
         WifiOff(seqNo++);
         break;
-
+    //c Wifi On
     case 'c':
         WifiOn(seqNo++);
         break;
-
+    //d HTTP get req
     case 'd':
         printf("Enter server name:  %s\n\r", domain);
         scanf("%s", tmp);
@@ -438,7 +401,7 @@ void ProcessUserInput(void)
             strcpy(domain, tmp);
         sendHttpReqTest(domain, 0);
         break;
-
+    //e HTTP post req
     case'e':
         printf("Enter server name: ([CR] to accept %s)\n\r", domain);
         scanf("%s", tmp);
@@ -447,7 +410,7 @@ void ProcessUserInput(void)
         strcpy(domain, tmp);
         sendHttpPostDemo(domain);
         break;
-
+    //f HTTP post Json req
     case 'f':
         printf("Make sure STA is connected to SN8200 soft AP.\n\r");
         strcpy(domain, "sn8200.com");
@@ -459,7 +422,7 @@ void ProcessUserInput(void)
         sendHttpJsonPostDemo(domain);
         break;
 #if 1
-
+    //g HTTP chunked post req
     case 'g':
         strcpy(domain, "192.168.10.100");
         printf("Enter server name (or the peer testclient IP, peer testclient should start TCP server on port 80): ([CR] to accept %s)\n\r", domain);
@@ -470,7 +433,7 @@ void ProcessUserInput(void)
         sendHttpChunkReqTest(domain);
         break;
 #endif
-
+    //h HTTPS get req
     case 'h':
         printf("Enter server name: ([CR] to accept %s)\n\r", domain);
         scanf("%s", tmp);
@@ -479,7 +442,7 @@ void ProcessUserInput(void)
             strcpy(domain, tmp);
         sendHttpReqTest(domain, 1);
         break;
-
+    //i TLS client
     case 'i':
         timeout1 = 5;
         mysock = -1;
@@ -509,7 +472,7 @@ void ProcessUserInput(void)
             else printf("Connect failed.\n\r");
         }
         break;
-
+    //j TLS server (HTTPS server)
     case 'j': //ssl server
         strcpy(Portstr, "443");
         if (setTCPinfo() == CMD_ERROR) {
@@ -522,10 +485,6 @@ void ProcessUserInput(void)
             // This connection can receive data upto TEST_BUFFERSIZE at a time. 
             tcpCreateConnection(mysock, TEST_BUFFERSIZE, 0x5, seqNo++);
         }
-        break;
-
-    case 'm':
-        ShowMenu();
         break;
 
     default:
