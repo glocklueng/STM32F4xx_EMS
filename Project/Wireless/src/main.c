@@ -33,7 +33,7 @@ uint32_t DBGU_RxBufferHead = 0;
 bool DBGU_InputReady = false;
 bool quit_flag = false;
 
-uint8_t key;
+//uint8_t key;
 uint8_t seqNo = 0;
 
 int8_t mysock = -1;
@@ -44,9 +44,9 @@ extern int destIP, srcIP;
 extern long int destPort, srcPort;
 extern int32u pktcnt;
 
-extern char domain[100];
+//extern char domain[100];
 extern char Portstr[8];
-char uri[100]={0};
+//char uri[100]={0};
 char sockConnected = -1;
 char sockClosed = -1;
 int timeout1 = 5;
@@ -73,11 +73,7 @@ extern bool IsWIFIJoinResponsed ;
 void DBGU_Init(void);
 bool DBGU_RxBufferEmpty(void);
 uint8_t DBGU_GetChar(void);
-void ProcessUserInput(void);
-int sendHttpReqTest(char *domain, char isHttps);
-int sendHttpPostDemo(char *domain);
-int sendHttpJsonPostDemo(char *domain);
-int sendHttpChunkReqTest(char *domain);
+void ProcessUserInput(uint8_t key);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -96,21 +92,22 @@ int main(void)
     LCD_SetBackColor(LCD_COLOR_BLUE);
     /* Set the LCD Text Color */
     LCD_SetTextColor(LCD_COLOR_WHITE);
-    LCD_DisplayStringLine(LINE(3), "Hello World");
 	
     SysTick_Configuration();
     DBGU_Init();
     SN8200_API_Init(921600);
-    strcpy(domain, "www.murata-ws.com");
-    strcpy(uri, "/index.html");
+    //strcpy(domain, "www.murata-ws.com");
+    //strcpy(uri, "/index.html");
 
     WifiOn(seqNo++);
-    printf("\n\r");
-
-    /* Infinite loop */
-    while (1) {
+	  ApOff(seqNo++);
+    ProcessUserInput('d');
+    
+	  /* Infinite loop */
+    /*while (1) {
         if(DBGU_InputReady) {
-            ProcessUserInput();
+            //ProcessUserInput();
+					  ProcessUserInput('d');
         }
 
         if(SN8200_API_HasInput()) {
@@ -119,7 +116,7 @@ int main(void)
 
         if(quit_flag)
             break;
-    }
+    }*/
 }
 
 void DBGU_Init(void)
@@ -261,17 +258,15 @@ int fgetc(FILE *f)
     return ch;
 }
 
-void ProcessUserInput(void)
+void ProcessUserInput(uint8_t key)
 {
-    char tmp[100];
+    //char tmp[100];
     //key = DBGU_GetChar();
-    //scanf("%c", &key);
-    //printf("\n\r");
-
-    if (key == 'q')
-        quit_flag = true;
-
     switch(key) {
+		//d 
+		case 'd':
+				LCD_DisplayStringLine(LINE(9), "   Success In   ");
+			  break;
 	  //0 Get WiFi status
     case '0':
         GetStatus(seqNo++);
@@ -392,105 +387,9 @@ void ProcessUserInput(void)
     case 'c':
         WifiOn(seqNo++);
         break;
-    //d HTTP get req
-    case 'd':
-        printf("Enter server name:  %s\n\r", domain);
-        scanf("%s", tmp);
-        printf("\n\r");
-        if (strlen(tmp)) 
-            strcpy(domain, tmp);
-        sendHttpReqTest(domain, 0);
-        break;
-    //e HTTP post req
-    case'e':
-        printf("Enter server name: ([CR] to accept %s)\n\r", domain);
-        scanf("%s", tmp);
-        printf("\n\r");
-        if (strlen(tmp)) 
-        strcpy(domain, tmp);
-        sendHttpPostDemo(domain);
-        break;
-    //f HTTP post Json req
-    case 'f':
-        printf("Make sure STA is connected to SN8200 soft AP.\n\r");
-        strcpy(domain, "sn8200.com");
-        printf("Enter server name: ([CR] to accept %s)\n\r", domain);
-        scanf("%s", tmp);
-        printf("\n\r");
-        if (strlen(tmp)) 
-            strcpy(domain, tmp);
-        sendHttpJsonPostDemo(domain);
-        break;
-#if 1
-    //g HTTP chunked post req
-    case 'g':
-        strcpy(domain, "192.168.10.100");
-        printf("Enter server name (or the peer testclient IP, peer testclient should start TCP server on port 80): ([CR] to accept %s)\n\r", domain);
-        scanf("%s", tmp);
-        printf("\n\r");
-        if (strlen(tmp)) 
-            strcpy(domain, tmp);
-        sendHttpChunkReqTest(domain);
-        break;
-#endif
-    //h HTTPS get req
-    case 'h':
-        printf("Enter server name: ([CR] to accept %s)\n\r", domain);
-        scanf("%s", tmp);
-        printf("\n\r");
-        if (strlen(tmp)) 
-            strcpy(domain, tmp);
-        sendHttpReqTest(domain, 1);
-        break;
-    //i TLS client
-    case 'i':
-        timeout1 = 5;
-        mysock = -1;
-        tcpCreateSocket(0, 0xFF, 0xFF, seqNo++, SNIC_TCP_CREATE_SIMPLE_TLS_SOCKET_REQ);  // use less memory in SN8200
-        mdelay(500);
-        if (mysock != -1) {
-            strcpy(Portstr, "443");
-            if (getTCPinfo() == CMD_ERROR) {
-                printf("Invalid Server\n\r");
-                break;
-            }
-            
-            tcpConnectToServer(mysock, destIP, (unsigned short)destPort,0x0000,timeout1,seqNo++);
-            while ((sockConnected == -1) && timeout1) {
-                mdelay(500);
-                timeout1--;
-                if (sockClosed == mysock) {
-                    sockClosed = -1;
-                    break;
-                }
-            }
-            
-            if (sockConnected == mysock) {
-                sendFromSock(mysock, (int8u*)GET_REQUEST, sizeof(GET_REQUEST)-1, 2, seqNo++);
-                sockConnected = -1;
-            }
-            else printf("Connect failed.\n\r");
-        }
-        break;
-    //j TLS server (HTTPS server)
-    case 'j': //ssl server
-        strcpy(Portstr, "443");
-        if (setTCPinfo() == CMD_ERROR) {
-            printf("Invalid Server to create\n\r");
-            break;
-        }
-        mysock = -1;
-        tcpCreateSocket(1, srcIP, (unsigned short)srcPort, seqNo++, SNIC_TCP_CREATE_ADV_TLS_SOCKET_REQ);
-        if (mysock != -1) {
-            // This connection can receive data upto TEST_BUFFERSIZE at a time. 
-            tcpCreateConnection(mysock, TEST_BUFFERSIZE, 0x5, seqNo++);
-        }
-        break;
-
     default:
         break;
     }
-
 }
 
 #ifdef  USE_FULL_ASSERT
@@ -513,97 +412,4 @@ void assert_failed(uint8_t* file, uint32_t line)
 }
 #endif
 
-/**
-  * @}
-  */
-int sendHttpReqTest(char *domain, char isHttps)
-{
-    char tmp[100];
-    char method = 0; //GET
-    char contentType[] = "text/html";
-    char otherHeader[] = "";
-    char content[] = "";
-    unsigned char timeout = 10;
-    printf("Enter URI after the server name: ([CR] to accept %s)\n\r", uri);
-    scanf("%s",tmp);
-    printf("\n\r");
-
-    if (strlen(tmp))
-        strcpy(uri, tmp);
-    return fillNSendHttpReq(seqNo++, domain, uri, method, contentType, otherHeader, strlen(content), content, timeout, 0, isHttps);
-}
-
-/**
-  * @
-  */
-
-int sendHttpPostDemo(char *domain)
-{
-    char content[256]={0};
-    char tmp[100];
-    char method = 1; //POST
-    char contentType[] = "text/html";
-    char otherHeader[] = "Accept-Language: en-US\r\n";
-    unsigned char timeout = 10;
-
-    printf("Enter URI after the server name: ([CR] to accept %s)\n\r", uri);
-    scanf("%s",tmp);
-    printf("\n\r");
-    if (strlen(tmp))
-        strcpy(uri, tmp);
-    printf("Enter content to POST: \n\r");
-    scanf("%s",content);
-    printf("\n\r");
-    if (strlen(uri)==0)
-        strcpy(uri, "/add.php");
-    return fillNSendHttpReq(seqNo++, domain, uri, method, contentType, otherHeader, strlen(content), content, timeout, 0,0);
-}
-/**
-  * @
-  */
-int sendHttpJsonPostDemo(char *domain)
-{
-    char content[]="Params=%7B%22if%22%3A%22sta%22%7D&callback=jsonp1363359950547";
-    char tmp[100];
-
-    char method = 1; //POST
-    char contentType[] = "application/x-www-form-urlencoded";
-    char otherHeader[] = "Accept-Language: en-US\r\n";
-    unsigned char timeout = 10;
-
-    strcpy(uri, "/sws/wifi/stat");
-    printf("Enter URI after the server name: ([CR] to accept %s)\n\r", uri);
-    scanf("%s",tmp);
-    printf("\n\r");
-    if (strlen(tmp))
-        strcpy(uri, tmp);
-    printf("Enter content to POST: ([CR] to accept %s)\n\r", content);
-    scanf("%s",tmp);
-    printf("\n\r");
-    if (strlen(tmp))
-        strcpy(content, tmp);
-    return fillNSendHttpReq(seqNo++, domain, uri, method, contentType, otherHeader, strlen(content), content, timeout, 0,0);
-}
-/**
-  * @
-  */
-int sendHttpChunkReqTest(char *domain)
-{
-    char uri[] = "/rest/thermostatGetTime";
-    char method = 1; //POST
-    char contentType[] = "application/x-www-form-urlencoded";
-    char otherHeader[] = "Accept: text/html,application/xml\r\nAccept-Language: en-US\r\n";
-    char content[] = "mcu_serial_number_hex=00112233445566778899AA";
-    char content1[] = "&username=MyUsername&password=MyPassword"; 
-    unsigned char timeout = 20;
-    int16u len = strlen(content); // more data
-    
-    // first chunk
-    fillNSendHttpReq(seqNo++, domain, uri, method, contentType, otherHeader, len, content, timeout, 1, 0);
-    mdelay(1000);
-    //second chunk
-    fillNSendHttpMoreReq(seqNo++, strlen(content1), content1, 0);
-    return 0;
-}
-                                                                               
 /******** (C) COPYRIGHT 2015 Xiaotian @ University of York *****END OF FILE****/

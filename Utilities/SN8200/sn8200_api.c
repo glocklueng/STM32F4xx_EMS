@@ -360,6 +360,31 @@ void WifiOff(int8u seq)
     printf("-WifiOff\n\r");
 }
 
+//add
+void ApOff(int8u seq)
+{
+	  int8u buf[4];
+
+    APOnOff = 0;
+    buf[0] = WIFI_AP_CTRL_REQ;
+    buf[1] = seq;
+    buf[2] = APOnOff;
+    buf[3] = 0; //persistency hardcode set as 0 means NOT save to NVM
+    serial_transmit(CMD_ID_WIFI, buf, 4, ACK_NOT_REQUIRED);
+
+    timeout = 10000;
+    while (timeout--) {
+        if(SN8200_API_HasInput()) {
+            ProcessSN8200Input();
+        }
+        if(IsWIFIApCtrlResponsed) {
+            IsWIFIApCtrlResponsed = false;
+            break;
+        }
+        mdelay(1);
+    }
+}
+
 void ApOnOff(int8u seq)
 {
     int8u buf[4];
