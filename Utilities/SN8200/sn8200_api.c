@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "stm32f4_discovery.h"
+#include "stm32f4_discovery_lcd.h"
+
 #define ACK_REQUIRED 1
 #define ACK_NOT_REQUIRED 0
 
@@ -28,7 +31,7 @@ int32u timeout = 10000;
 
 int8u totalscan = 0;
 scanlist_t sl[30];
-char SSID[32];
+char SSID[32] = "UoY Setup";
 int SSIDlen = 0;
 int8u secMode = 0;
 int8u APOnOff = 1;
@@ -432,24 +435,27 @@ void WifiJoin(int8u seq)
     *p++ = WIFI_JOIN_REQ;
     *p++ = seq;
 
-    printf("Enter SSID:\n\r");
-    scanf("%s", SSID);
-    printf("\n\r");
+    //printf("Enter SSID:\n\r");
+    //scanf("%s", SSID);
+    //printf("\n\r");
+		/*
     while(!strlen(SSID)) {
         printf("SSID can't be empty. Enter SSID:\n\r");
         scanf("%s", SSID);
         printf("\n\r");
     }
+		*/
     memcpy(p, SSID, strlen(SSID));
 
     p += strlen(SSID);
     *p++ = 0x00;
-
+		/*
     printf("Enter Security Mode (e.g., 0 for open, 2 for WPA TKIP, 4 for WPA2 AES, 6 for WPA2 MIXED):\n\r");
     scanf("%s", tempstr);
     printf("\n\r");
     secMode = atoi(tempstr);
-
+    */
+		secMode = 0;
     if (secMode) {
         printf("Enter Security Key:\n\r");
         scanf("%s", secKey);
@@ -546,14 +552,15 @@ void SnicIPConfig(int8u seq)
 void SnicGetDhcp(int8u seq)
 {
     int8u buf[3];
-    char tempstr[2] = {0};
+    //char tempstr[2] = {0};
 
     buf[0] = SNIC_GET_DHCP_INFO_REQ;
     buf[1] = seq;
-    printf("\n\rInterface Type? (0: STA  1: AP) \n\r");
-    scanf("%s", tempstr);
-    printf("\n\r");
-    buf[2] = atoi(tempstr);
+    //printf("\n\rInterface Type? (0: STA  1: AP) \n\r");
+    //scanf("%s", tempstr);
+    //printf("\n\r");
+    //buf[2] = atoi(tempstr);
+		buf[2] = 0;
     //buf[2] = 0; // STA  1; // AP
 
     serial_transmit(CMD_ID_SNIC, buf, 3, ACK_NOT_REQUIRED);
@@ -816,7 +823,7 @@ void handleRxWiFi(int8u* buf, int len)
     case WIFI_GET_STATUS_RSP: {
         IsWIFIGetStatusResponsed = true;
         if (buf[2] == MODE_WIFI_OFF) {
-            printf("WiFi Off.\n\r");
+					  LCD_DisplayStringLine(LINE(1), " WiFi Off.");
         } else {
             char val[20] = {0};
             int i=0;
@@ -824,12 +831,16 @@ void handleRxWiFi(int8u* buf, int len)
                 sprintf(val+3*i, "%02X:", buf[3+i]);
             }
             val[strlen(val)-1] = 0;
-            printf("WiFi On.  Mac: %s.  ", val);
-
+						LCD_DisplayStringLine(LINE(1), " WiFi On & Mac: ");
+						LCD_DisplayStringLine(LINE(2), val );
             if (buf[2] == MODE_NO_NETWORK) {
-                printf("Not joined any network.\n\r");
+                //printf("Not joined any network.\n\r");
+						    LCD_DisplayStringLine(LINE(4), "Not joined any network");
             } else {
-                printf("Joined SSID: %s\n\r", buf+9);
+                //printf("Joined SSID: %s\n\r", buf+9);
+							  char strtmp[25];
+							  sprintf(strtmp, "SSID: %s", buf+9);
+							  LCD_DisplayStringLine(LINE(4), strtmp);
             }
         }
     }
@@ -848,11 +859,11 @@ void handleRxWiFi(int8u* buf, int len)
         IsWIFIApCtrlResponsed = true;
         if (WIFI_SUCCESS == buf[2]) {
             if (APOnOff)
-                printf("AP is ON\n\r");
+						    LCD_DisplayStringLine(LINE(3), " AP is ON ");
             else
-                printf("AP is OFF\n\r");
+						    LCD_DisplayStringLine(LINE(3), " AP is OFF ");
         } else
-            printf("AP control fail\n\r");
+				    LCD_DisplayStringLine(LINE(3), " AP control fail ");
     }
     break;
 
@@ -949,11 +960,13 @@ void handleRxSNIC(uint8_t* buf, int len)
     case SNIC_GET_DHCP_INFO_RSP: {
         IsSNICGetDHCPInfoResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
-            printf("IP assigned as %i.%i.%i.%i \n\r", buf[9],buf[10],buf[11],buf[12]);
+					  char strtmp[25];
+					  sprintf(strtmp,"IP: %i.%i.%i.%i", buf[9],buf[10],buf[11],buf[12]);
+					  LCD_DisplayStringLine(LINE(5), strtmp);
             //save IP
             memcpy(&selfIP, buf+9, 4);
         } else
-            printf("IP not assigned\n\r");
+				    LCD_DisplayStringLine(LINE(5), "IP not assigned");
     }
     break;
 

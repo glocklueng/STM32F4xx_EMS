@@ -33,7 +33,6 @@ uint32_t DBGU_RxBufferHead = 0;
 bool DBGU_InputReady = false;
 bool quit_flag = false;
 
-//uint8_t key;
 uint8_t seqNo = 0;
 
 int8_t mysock = -1;
@@ -44,9 +43,7 @@ extern int destIP, srcIP;
 extern long int destPort, srcPort;
 extern int32u pktcnt;
 
-//extern char domain[100];
 extern char Portstr[8];
-//char uri[100]={0};
 char sockConnected = -1;
 char sockClosed = -1;
 int timeout1 = 5;
@@ -73,6 +70,7 @@ extern bool IsWIFIJoinResponsed ;
 void DBGU_Init(void);
 bool DBGU_RxBufferEmpty(void);
 uint8_t DBGU_GetChar(void);
+void GetIP(void);
 void ProcessUserInput(uint8_t key);
 
 /* Private functions ---------------------------------------------------------*/
@@ -96,12 +94,13 @@ int main(void)
     SysTick_Configuration();
     DBGU_Init();
     SN8200_API_Init(921600);
-    //strcpy(domain, "www.murata-ws.com");
-    //strcpy(uri, "/index.html");
 
     WifiOn(seqNo++);
 	  ApOff(seqNo++);
-    ProcessUserInput('d');
+	  GetStatus(seqNo++);
+	  ProcessUserInput('2');
+	  GetIP();
+	  
     
 	  /* Infinite loop */
     /*while (1) {
@@ -258,19 +257,19 @@ int fgetc(FILE *f)
     return ch;
 }
 
+
+void GetIP(void)
+{
+	SnicInit(seqNo++);
+	SnicGetDhcp(seqNo++);
+}
+
+
 void ProcessUserInput(uint8_t key)
 {
     //char tmp[100];
     //key = DBGU_GetChar();
     switch(key) {
-		//d 
-		case 'd':
-				LCD_DisplayStringLine(LINE(9), "   Success In   ");
-			  break;
-	  //0 Get WiFi status
-    case '0':
-        GetStatus(seqNo++);
-        break;
     //1 Wifi Scan
     case '1':
         WifiScan(seqNo++);
@@ -283,10 +282,10 @@ void ProcessUserInput(uint8_t key)
         SnicIPConfig(seqNo++);
         break;
     //3 Get IP
-    case '3':
+    /*case '3':
         SnicInit(seqNo++);
         SnicGetDhcp(seqNo++);
-        break;
+        break;*/
     //4 TCP client
     case '4':
         mysock = -1;
@@ -347,9 +346,9 @@ void ProcessUserInput(uint8_t key)
         WifiDisconn(seqNo++);
         break;
     //8 AP On/Off
-    case '8':
-        ApOnOff(seqNo++);
-        break;
+    //case '8':
+    //    ApOnOff(seqNo++);
+    //    break;
     //9 UDP client
     case '9': {//udp send
         int i;
@@ -379,14 +378,10 @@ void ProcessUserInput(uint8_t key)
         break;
     }
     //b Wifi Off
-    case 'b':
-        SnicCleanup(seqNo++);
-        WifiOff(seqNo++);
-        break;
-    //c Wifi On
-    case 'c':
-        WifiOn(seqNo++);
-        break;
+    //case 'b':
+    //    SnicCleanup(seqNo++);
+    //    WifiOff(seqNo++);
+    //    break;
     default:
         break;
     }
