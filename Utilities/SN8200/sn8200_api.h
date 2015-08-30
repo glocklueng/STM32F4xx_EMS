@@ -31,9 +31,9 @@ u32_t inet_addr(const char *cp);
 
 
 int getTCPinfo(void);
-int setTCPinfo(void);
 int getUDPinfo(void);
-int setUDPinfo(void);
+void setTCPinfo(void);
+void setUDPinfo(void)
 
 void SN8200_API_Init(uint32_t baudrate);
 bool SN8200_API_HasInput(void);
@@ -41,7 +41,6 @@ void GetStatus(int8u seq);
 void WifiOn(int8u seq);
 void WifiOff(int8u seq);
 void ApOnOff(int8u OnOff, int8u seq);
-void WifiScan(int8u seq);
 void WifiJoin(int8u seq);
 void WifiDisconn(int8u seq);
 void SnicInit(int8u seq);

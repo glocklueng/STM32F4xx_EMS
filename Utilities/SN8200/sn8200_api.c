@@ -13,13 +13,6 @@
 #define ACK_REQUIRED 1
 #define ACK_NOT_REQUIRED 0
 
-typedef struct {
-    int ch;
-    int rssi;
-    int sectype;
-    char SSIDname[33];
-} scanlist_t ;
-
 extern int buf_pos;
 extern unsigned char RxBuffer[];
 extern int ack_recv_status;
@@ -29,8 +22,6 @@ extern int8s sockClosed;
 
 int32u timeout = 10000;
 
-int8u totalscan = 0;
-scanlist_t sl[30];
 char SSID[32];
 int SSIDlen = 0;
 int8u secMode = 0;
@@ -229,29 +220,6 @@ int getTCPinfo(void)
 
 }
 
-int setTCPinfo(void)
-{
-    char teststr[8] = "2222";
-    if (selfIP == 0) {
-        printf("IP address has not been obtained.\n\r");
-        return CMD_ERROR;
-    }
-
-    srcIP = selfIP;
-
-    srcPort = strtol(teststr, NULL, 0);
-    srcPort = swap16(srcPort);
-
-    if (srcPort > 0xFFFF) {
-        printf("Invalid port, max limit 0xFFFF \n\r");
-        return CMD_ERROR;
-    }
-
-    return 0;
-
-}
-
-
 int getUDPinfo(void)
 {
     char tempIPstr[32];
@@ -278,30 +246,18 @@ int getUDPinfo(void)
 
 }
 
-
-int setUDPinfo(void)
+void setTCPinfo(void)
 {
-    char teststr[8];
-    if (selfIP == 0) {
-        printf("IP address has not been obtained.\n\r");
-        return CMD_ERROR;
-    }
+    srcIP = selfIP;
+    srcPort = 2222;
+    srcPort = swap16(srcPort);
+}
 
+void setUDPinfo(void)
+{
     udpSrcIP = selfIP;
-
-    printf("Enter server port number to set: \n\r");
-    scanf("%s", teststr);
-    printf("\n\r");
-    udpSrcPort = strtol(teststr, NULL, 0);
+    udpSrcPort = 2222
     udpSrcPort = swap16(udpSrcPort);
-
-    if (udpSrcPort > 0xFFFF) {
-        printf("Invalid port, max limit 0xFFFF \n\r");
-        return CMD_ERROR;
-    }
-
-    return 0;
-
 }
 
 void SN8200_API_Init(uint32_t baudrate)
@@ -375,17 +331,6 @@ void ApOnOff(int8u OnOff, int8u seq)
         }
         mdelay(1);
     }
-}
-
-void WifiScan(int8u seq)
-{
-    int8u buf[12];
-    buf[0] = WIFI_SCAN_REQ;
-    buf[1] = seq;
-    memset(&buf[2], 0, 10);
-    buf[3] = 2; // bss type = any
-
-    serial_transmit(CMD_ID_WIFI, buf, 12, ACK_NOT_REQUIRED);
 }
 
 void WifiJoin(int8u seq)
@@ -504,7 +449,6 @@ void SnicIPConfig(int8u seq)
 void SnicGetDhcp(int8u seq)
 {
     int8u buf[3];
-    char tempstr[2] = {0};
 
     buf[0] = SNIC_GET_DHCP_INFO_REQ;
     buf[1] = seq;
@@ -563,12 +507,7 @@ int closeSocket(int8u shortSocket, int8u seq)
     buf[1] = seq;
     buf[2] = shortSocket;
     serial_transmit(CMD_ID_SNIC, buf, 3, ACK_NOT_REQUIRED);
-
-    printf("-closeSocket\n\r");
-    printf("Socket %d closed\n\r", shortSocket);
-
     return 0;
-
 }
 
 int tcpConnectToServer(int8u shortSock, int32u ip, int16u port, int16u bufsize, int8u timeout, int8u seq)
@@ -720,7 +659,6 @@ int udpSendFromSock(int32u ip, int16u iPort, int8u shortsock, int8u conMode, int
         }
         mdelay(1);
     }
-
     return 0;
 }
 
@@ -804,52 +742,6 @@ void handleRxWiFi(int8u* buf, int len)
         }
     }
     break;
-    
-		/*
-    case WIFI_SCAN_RESULT_IND: {
-        int cnt = buf[2];
-        int i=3;
-        int j;
-        int8u ch, sec_tmp;
-        int8s rssi;
-        int8u len=32;
-
-        if(cnt == 0) {
-            for (j = 0; j < totalscan; j++) {
-                printf("SSID: %20s CH: %2d RSSI: %3d Sec: %d\n\r",sl[j].SSIDname, sl[j].ch,sl[j].rssi,sl[j].sectype);
-            }
-            memset(sl, 0, totalscan * sizeof(scanlist_t));
-            totalscan = 0; //reset current scan result
-        } else {
-            while (cnt--) {
-                ch = buf[i++];
-                rssi = (int8s)buf[i++];
-                sec_tmp = buf[i++];
-                i += 6;
-                i++;
-                i += 2;
-                len = (int8u)strlen((char*)buf+i);
-                if (len>32) {
-                    break;
-                }
-
-                strcpy((char*)sl[totalscan].SSIDname,(char*)buf+i);
-
-                sl[totalscan].ch = ch;
-                sl[totalscan].rssi = rssi;
-                sl[totalscan].sectype = sec_tmp;
-
-                if (len == 0) {
-                    while (buf[i] == 0) i++;
-                } else
-                    i += len+1;
-
-                totalscan++;
-            }
-        }
-    }
-    break;
-		*/
 
     default:
         break;
@@ -957,22 +849,22 @@ void handleRxSNIC(uint8_t* buf, int len)
 			  char strtmp[20];
 			  sprintf(strtmp, "socket %d rvd %d", sock, buf[5]);
 			  LCD_DisplayStringLine(LINE(5), strtmp);
-			  if(buf[5] = 0x00){
+			  if(buf[5] == 0x00){
 					IsSensorOn = false;
 				}
-				if(buf[5] = 0x01){
+				if(buf[5] == 0x01){
 				  IsSensorOn = true;
 				}
-				if(buf[5] = 0x02){
+				if(buf[5] == 0x02){
 				  IsAudioOn = false;
 				}
-				if(buf[5] = 0x03){
+				if(buf[5] == 0x03){
 				  IsAudioOn = true;
 				}
-				if(buf[5] = 0x04){
+				if(buf[5] == 0x04){
 				  IsVideoOn = false;
 				}
-				if(buf[5] = 0x05){
+				if(buf[5] == 0x05){
 				  IsVideoOn = true;
 				}
 				
@@ -1002,7 +894,7 @@ void handleRxSNIC(uint8_t* buf, int len)
     break;
 
     case SNIC_TCP_CLIENT_SOCKET_IND: {
-        int8u listen_sock = buf[2];
+        //int8u listen_sock = buf[2];
 			  char strtmp[20];
 			  sprintf(strtmp, "%d on %i.%i.%i.%i", buf[3], buf[4], buf[5], buf[6], buf[7]);
 			  LCD_DisplayStringLine(LINE(4), strtmp);

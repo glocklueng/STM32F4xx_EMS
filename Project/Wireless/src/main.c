@@ -47,6 +47,7 @@ char sockClosed = -1;
 extern bool IsCreateSocketResponsed ;
 extern int32u timeout;
 extern bool IsWIFIJoinResponsed ;
+extern int32u selfIP;
 
 bool IsVideoOn = false;
 bool IsAudioOn = false;
@@ -97,10 +98,7 @@ int main(void)
 		}*/
 		
 		/* TCPServer */
-    if (setTCPinfo() == CMD_ERROR) {
-			printf("Invalid Server to create\n\r");
-			return;
-		}
+		setTCPinfo();
 		mysock = -1;
 		tcpCreateSocket(1, srcIP, (unsigned short)srcPort, seqNo++, SNIC_TCP_CREATE_SOCKET_REQ);
 		if (mysock != -1) {
