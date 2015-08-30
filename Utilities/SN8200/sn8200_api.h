@@ -40,7 +40,7 @@ bool SN8200_API_HasInput(void);
 void GetStatus(int8u seq);
 void WifiOn(int8u seq);
 void WifiOff(int8u seq);
-void ApOnOff(int8u seq);
+void ApOnOff(int8u OnOff, int8u seq);
 void WifiScan(int8u seq);
 void WifiJoin(int8u seq);
 void WifiDisconn(int8u seq);

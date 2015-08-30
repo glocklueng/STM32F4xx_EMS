@@ -31,7 +31,7 @@ int32u timeout = 10000;
 
 int8u totalscan = 0;
 scanlist_t sl[30];
-char SSID[32] = "UoY Setup";
+char SSID[32];
 int SSIDlen = 0;
 int8u secMode = 0;
 int8u APOnOff = 1;
@@ -77,6 +77,11 @@ long int udpSrcPort = PORT_NONE;
 volatile int8u sendUDPDone = 0;
 extern int8u seqNo;
 
+extern bool IsVideoOn;
+extern bool IsAudioOn;
+extern bool IsSensorOn;
+
+//encodedLen
 
 u32_t
 inet_addr(const char *cp)
@@ -195,28 +200,22 @@ inet_aton(const char *cp, struct in_addr *addr)
 
 int getTCPinfo(void)
 {
-    char tempIPstr[32];
-    char teststr[8];
+    char tempIPstr[32] = "172.31.0.4";
+    char teststr[8] = "2222";
     
     if (strlen(IPstr)==0)
         strcpy(IPstr, "192.168.10.101");
 
     if (strlen(Portstr)==0)
         strcpy(Portstr, "0x6990");
-
-    printf("Enter server IP to connect: \n\r");
-    scanf("%s", tempIPstr);
-    printf("\n\r");
+		
     if (strlen(tempIPstr))
         strcpy(IPstr, tempIPstr);
     destIP = inet_addr(IPstr);
     if (destIP == INADDR_NONE || destIP == INADDR_ANY) {
         return CMD_ERROR;
     }
-
-    printf("Enter server port number: \n\r");
-    scanf("%s", teststr);
-    printf("\n\r");
+		
     if (strlen(teststr))
         strcpy(Portstr, teststr);
     destPort = strtol(Portstr, NULL, 0);
@@ -232,7 +231,7 @@ int getTCPinfo(void)
 
 int setTCPinfo(void)
 {
-    char teststr[8];
+    char teststr[8] = "2222";
     if (selfIP == 0) {
         printf("IP address has not been obtained.\n\r");
         return CMD_ERROR;
@@ -240,9 +239,6 @@ int setTCPinfo(void)
 
     srcIP = selfIP;
 
-    printf("Enter server port number to set: \n\r");
-    scanf("%s", teststr);
-    printf("\n\r");
     srcPort = strtol(teststr, NULL, 0);
     srcPort = swap16(srcPort);
 
@@ -326,8 +322,6 @@ void GetStatus(int8u seq)
     buf[2] = 0;
     serial_transmit(CMD_ID_WIFI, buf, 3, ACK_NOT_REQUIRED);
 
-    printf("-GetStatus\n\r");
-
     timeout = 10000;
     while (timeout--) {
         if(SN8200_API_HasInput()) {
@@ -349,8 +343,6 @@ void WifiOn(int8u seq)
     buf[2] = (char)'U';
     buf[3] = (char)'S';
     serial_transmit(CMD_ID_WIFI, buf, 4, ACK_NOT_REQUIRED);
-
-    printf("-WifiOn\n\r");
 }
 
 void WifiOff(int8u seq)
@@ -359,47 +351,18 @@ void WifiOff(int8u seq)
     buf[0] = WIFI_OFF_REQ;
     buf[1] = seq;
     serial_transmit(CMD_ID_WIFI, buf, 2, ACK_NOT_REQUIRED);
-
-    printf("-WifiOff\n\r");
 }
 
-//add
-void ApOff(int8u seq)
-{
-	  int8u buf[4];
-
-    APOnOff = 0;
-    buf[0] = WIFI_AP_CTRL_REQ;
-    buf[1] = seq;
-    buf[2] = APOnOff;
-    buf[3] = 0; //persistency hardcode set as 0 means NOT save to NVM
-    serial_transmit(CMD_ID_WIFI, buf, 4, ACK_NOT_REQUIRED);
-
-    timeout = 10000;
-    while (timeout--) {
-        if(SN8200_API_HasInput()) {
-            ProcessSN8200Input();
-        }
-        if(IsWIFIApCtrlResponsed) {
-            IsWIFIApCtrlResponsed = false;
-            break;
-        }
-        mdelay(1);
-    }
-}
-
-void ApOnOff(int8u seq)
+void ApOnOff(int8u OnOff, int8u seq)
 {
     int8u buf[4];
 
-    APOnOff ^= 1;
+    APOnOff = OnOff;
     buf[0] = WIFI_AP_CTRL_REQ;
     buf[1] = seq;
     buf[2] = APOnOff;
     buf[3] = 0; //persistency hardcode set as 0 means NOT save to NVM
     serial_transmit(CMD_ID_WIFI, buf, 4, ACK_NOT_REQUIRED);
-
-    printf("-AP status\n\r");
 
     timeout = 10000;
     while (timeout--) {
@@ -423,7 +386,6 @@ void WifiScan(int8u seq)
     buf[3] = 2; // bss type = any
 
     serial_transmit(CMD_ID_WIFI, buf, 12, ACK_NOT_REQUIRED);
-    printf("-WifiScan\n\r");
 }
 
 void WifiJoin(int8u seq)
@@ -435,27 +397,24 @@ void WifiJoin(int8u seq)
     *p++ = WIFI_JOIN_REQ;
     *p++ = seq;
 
-    //printf("Enter SSID:\n\r");
-    //scanf("%s", SSID);
-    //printf("\n\r");
-		/*
+    printf("Enter SSID:\n\r");
+    scanf("%s", SSID);
+    printf("\n\r");
     while(!strlen(SSID)) {
         printf("SSID can't be empty. Enter SSID:\n\r");
         scanf("%s", SSID);
         printf("\n\r");
     }
-		*/
     memcpy(p, SSID, strlen(SSID));
 
     p += strlen(SSID);
     *p++ = 0x00;
-		/*
+
     printf("Enter Security Mode (e.g., 0 for open, 2 for WPA TKIP, 4 for WPA2 AES, 6 for WPA2 MIXED):\n\r");
     scanf("%s", tempstr);
     printf("\n\r");
     secMode = atoi(tempstr);
-    */
-		secMode = 0;
+
     if (secMode) {
         printf("Enter Security Key:\n\r");
         scanf("%s", secKey);
@@ -477,9 +436,7 @@ void WifiJoin(int8u seq)
     }
 
     serial_transmit(CMD_ID_WIFI, buf, (int)(p - buf), ACK_NOT_REQUIRED);
-
-    printf("-WifiJoin\n\r");
-
+		
     timeout = 10000;
     while (timeout--) {
         if(SN8200_API_HasInput()) {
@@ -500,7 +457,6 @@ void WifiDisconn(int8u seq)
     buf[0] = WIFI_DISCONNECT_REQ;
     buf[1] = seq;
     serial_transmit(CMD_ID_WIFI, buf, 2, ACK_NOT_REQUIRED);
-    printf("-WifiDisconn\n\r");
 }
 
 void SnicInit(int8u seq)
@@ -512,7 +468,6 @@ void SnicInit(int8u seq)
     buf[1] = seq;
     memcpy(buf+2, (uint8_t*)&tmp, 2);
     serial_transmit(CMD_ID_SNIC, buf, 4, ACK_NOT_REQUIRED);
-    printf("-SnicInit\n\r");
 }
 
 void SnicCleanup(int8u seq)
@@ -521,7 +476,6 @@ void SnicCleanup(int8u seq)
     buf[0] = SNIC_CLEANUP_REQ;
     buf[1] = seq;
     serial_transmit(CMD_ID_SNIC, buf, 2, ACK_NOT_REQUIRED);
-    printf("-SnicCleanup\n\r");
 }
 
 void SnicIPConfig(int8u seq)
@@ -532,9 +486,7 @@ void SnicIPConfig(int8u seq)
     buf[1] = seq;
     buf[2] = 0; //STA
     buf[3] = 1; //DHCP
-
     serial_transmit(CMD_ID_SNIC, buf, 4, ACK_NOT_REQUIRED);
-    printf("-SnicIPConfig\n\r");
 
     timeout = 10000;
     while (timeout--) {
@@ -552,19 +504,13 @@ void SnicIPConfig(int8u seq)
 void SnicGetDhcp(int8u seq)
 {
     int8u buf[3];
-    //char tempstr[2] = {0};
+    char tempstr[2] = {0};
 
     buf[0] = SNIC_GET_DHCP_INFO_REQ;
     buf[1] = seq;
-    //printf("\n\rInterface Type? (0: STA  1: AP) \n\r");
-    //scanf("%s", tempstr);
-    //printf("\n\r");
-    //buf[2] = atoi(tempstr);
-		buf[2] = 0;
-    //buf[2] = 0; // STA  1; // AP
+    buf[2] = 1;    // 0: STA  1: AP
 
     serial_transmit(CMD_ID_SNIC, buf, 3, ACK_NOT_REQUIRED);
-    printf("-SnicGetDhcp\n\r");
 
     timeout = 10000;
     while (timeout--) {
@@ -594,8 +540,6 @@ int tcpCreateSocket(int8u bindOption, int32u localIp, int16u port, int8u seq, in
         serial_transmit(CMD_ID_SNIC, buf, 9, ACK_NOT_REQUIRED);
     } else
         serial_transmit(CMD_ID_SNIC, buf, 3, ACK_NOT_REQUIRED);
-
-    printf("-tcpCreateSocket\n\r");
 
     timeout = 10000;
     while (timeout--) {
@@ -647,7 +591,6 @@ int tcpConnectToServer(int8u shortSock, int32u ip, int16u port, int16u bufsize, 
 
     serial_transmit(CMD_ID_SNIC, buf, 12, ACK_NOT_REQUIRED);
 
-    printf("-tcpConnectToServer\n\r");
     mdelay(1000);        //Wait module return value
     while (1) {
         if(SN8200_API_HasInput()) {
@@ -682,8 +625,6 @@ int tcpCreateConnection(int8u shortSock, int16u size, int8u maxClient, int8u seq
 
     serial_transmit(CMD_ID_SNIC, buf, 6, ACK_NOT_REQUIRED);
 
-    printf("-tcpCreateConnection\n\r");
-
     return 0;
 }
 
@@ -705,8 +646,6 @@ int sendFromSock(int8u shortSocket, int8u * sendBuf, int16u len, int8u timeout, 
 
     serial_transmit(CMD_ID_SNIC, buf, 6+len, ACK_NOT_REQUIRED);
 
-    printf("-sendFromSock\n\r");
-
     while (1) {
         if(SN8200_API_HasInput()) {
             ProcessSN8200Input();
@@ -717,7 +656,6 @@ int sendFromSock(int8u shortSocket, int8u * sendBuf, int16u len, int8u timeout, 
         }
         mdelay(1);
     }
-
     return 0;
 }
 
@@ -738,8 +676,6 @@ int udpCreateSocket(int8u bindOption, int32u ip, int16u port, int8u seq)
         serial_transmit(CMD_ID_SNIC, buf, 9, ACK_NOT_REQUIRED);
     } else
         serial_transmit(CMD_ID_SNIC, buf, 3, ACK_NOT_REQUIRED);
-
-    printf("-udpCreateSocket\n\r");
 
     while (1) {
         if(SN8200_API_HasInput()) {
@@ -773,8 +709,6 @@ int udpSendFromSock(int32u ip, int16u iPort, int8u shortsock, int8u conMode, int
     memcpy(buf+12, sendbuf, len);
     serial_transmit(CMD_ID_SNIC, buf, 12+len, ACK_NOT_REQUIRED);
 
-    printf("-udpSendFromSock\n\r");
-
     timeout = 10000;
     while (timeout--) {
         if(SN8200_API_HasInput()) {
@@ -804,8 +738,6 @@ int udpStartRecv(int32u sock, int16u bufsize, int8u seq)
     memcpy(buf+3, (int8u*)&tmp, 2);
     serial_transmit(CMD_ID_SNIC, buf, 5, ACK_NOT_REQUIRED);
 
-    printf("-udpStartRecv\n\r");
-
     return 0;
 }
 
@@ -823,7 +755,7 @@ void handleRxWiFi(int8u* buf, int len)
     case WIFI_GET_STATUS_RSP: {
         IsWIFIGetStatusResponsed = true;
         if (buf[2] == MODE_WIFI_OFF) {
-					  LCD_DisplayStringLine(LINE(1), " WiFi Off.");
+            printf("WiFi Off.\n\r");
         } else {
             char val[20] = {0};
             int i=0;
@@ -831,16 +763,12 @@ void handleRxWiFi(int8u* buf, int len)
                 sprintf(val+3*i, "%02X:", buf[3+i]);
             }
             val[strlen(val)-1] = 0;
-						LCD_DisplayStringLine(LINE(1), " WiFi On & Mac: ");
-						LCD_DisplayStringLine(LINE(2), val );
+            printf("WiFi On.  Mac: %s.  ", val);
+
             if (buf[2] == MODE_NO_NETWORK) {
-                //printf("Not joined any network.\n\r");
-						    LCD_DisplayStringLine(LINE(4), "Not joined any network");
+                printf("Not joined any network.\n\r");
             } else {
-                //printf("Joined SSID: %s\n\r", buf+9);
-							  char strtmp[25];
-							  sprintf(strtmp, "SSID: %s", buf+9);
-							  LCD_DisplayStringLine(LINE(4), strtmp);
+                printf("Joined SSID: %s\n\r", buf+9);
             }
         }
     }
@@ -859,11 +787,11 @@ void handleRxWiFi(int8u* buf, int len)
         IsWIFIApCtrlResponsed = true;
         if (WIFI_SUCCESS == buf[2]) {
             if (APOnOff)
-						    LCD_DisplayStringLine(LINE(3), " AP is ON ");
+						    LCD_DisplayStringLine(LINE(1), "AP is ON");
             else
-						    LCD_DisplayStringLine(LINE(3), " AP is OFF ");
+						    LCD_DisplayStringLine(LINE(1), "AP is OFF");
         } else
-				    LCD_DisplayStringLine(LINE(3), " AP control fail ");
+				    LCD_DisplayStringLine(LINE(1), "AP control fail");
     }
     break;
 
@@ -876,7 +804,8 @@ void handleRxWiFi(int8u* buf, int len)
         }
     }
     break;
-
+    
+		/*
     case WIFI_SCAN_RESULT_IND: {
         int cnt = buf[2];
         int i=3;
@@ -920,66 +849,62 @@ void handleRxWiFi(int8u* buf, int len)
         }
     }
     break;
+		*/
 
     default:
         break;
     }
-    printf(".\n\r");
 }
-
-
 
 void handleRxSNIC(uint8_t* buf, int len)
 {
     uint8_t subCmdId = buf[0];
     static int times = 0;
-    static int isPrintable = 0;
 
     switch (subCmdId) {
 
     case SNIC_CLOSE_SOCKET_RSP: {
         if (SNIC_SUCCESS != buf[2]) 
-            printf("Close socket failed\n\r");
-        else {
-            printf("Socket closed\n\r");
-        }
+				    LCD_DisplayStringLine(LINE(9), "Close socket failed");
+        else 
+					  LCD_DisplayStringLine(LINE(9), "Socket closed");
     }
-            break;
+    break;
 
     case SNIC_IP_CONFIG_RSP: {
         IsSNICIPConfigResponsed = true;
         ipok = 0;
         if (SNIC_SUCCESS == buf[2]) {
-            printf("IPConfig OK\n\r");
+					  LCD_DisplayStringLine(LINE(9), "IPConfig OK");
             ipok = 1;
         } else
-            printf("IPConfig fail\n\r");
+				    LCD_DisplayStringLine(LINE(9), "IPConfig fail");
     }
     break;
 
     case SNIC_GET_DHCP_INFO_RSP: {
         IsSNICGetDHCPInfoResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
-					  char strtmp[25];
-					  sprintf(strtmp,"IP: %i.%i.%i.%i", buf[9],buf[10],buf[11],buf[12]);
-					  LCD_DisplayStringLine(LINE(5), strtmp);
+					  char strtmp[20];
+					sprintf(strtmp, "IP:%i.%i.%i.%i", buf[9],buf[10],buf[11],buf[12]);
+					LCD_DisplayStringLine(LINE(2), strtmp);
             //save IP
             memcpy(&selfIP, buf+9, 4);
         } else
-				    LCD_DisplayStringLine(LINE(5), "IP not assigned");
+				    LCD_DisplayStringLine(LINE(2), "IP not assigned");
     }
     break;
 
     case SNIC_TCP_CREATE_SOCKET_RSP:
-    case SNIC_TCP_CREATE_ADV_TLS_SOCKET_RSP:
-    case SNIC_TCP_CREATE_SIMPLE_TLS_SOCKET_RSP:
     case SNIC_UDP_CREATE_SOCKET_RSP: {
         IsCreateSocketResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
-            mysock = buf[3];
-            printf("Socket %d opened\n\r", mysock);
+					char strtmp[20];
+					mysock = buf[3];
+					sprintf(strtmp, "Socket %d opened", mysock);
+					LCD_DisplayStringLine(LINE(3), strtmp);
         } else
-            printf("Socket creation failed\n\r");
+				  LCD_DisplayStringLine(LINE(3), "Socket creation failed");
     }
     break;
 
@@ -1015,9 +940,12 @@ void handleRxSNIC(uint8_t* buf, int len)
         int32u sentsize;
         IsSNICSendFromSocketResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
+					  char strtmp[20];
             pktcnt ++;
             sentsize = ((int32u)(buf[3] << 8) | (int32u)buf[4]);
-            printf("pkt %d, %d bytes sent \n\r", pktcnt, sentsize);
+					  sprintf(strtmp, "pkt %d, %d bytes sent", pktcnt, sentsize);
+            //printf("pkt %d, %d bytes sent \n\r", pktcnt, sentsize);
+					  LCD_DisplayStringLine(LINE(7), strtmp);
         }
     }
     break;
@@ -1026,7 +954,29 @@ void handleRxSNIC(uint8_t* buf, int len)
         int i=0;
         int32u sentsize = ((int32u)(buf[3] << 8) | (int32u)buf[4]);
         int32u sock = (int32u)buf[2];
-        printf("%d bytes received from socket %d \n\r", sentsize, sock);
+			  char strtmp[20];
+			  sprintf(strtmp, "socket %d rvd %d", sock, buf[5]);
+			  LCD_DisplayStringLine(LINE(5), strtmp);
+			  if(buf[5] = 0x00){
+					IsSensorOn = false;
+				}
+				if(buf[5] = 0x01){
+				  IsSensorOn = true;
+				}
+				if(buf[5] = 0x02){
+				  IsAudioOn = false;
+				}
+				if(buf[5] = 0x03){
+				  IsAudioOn = true;
+				}
+				if(buf[5] = 0x04){
+				  IsVideoOn = false;
+				}
+				if(buf[5] = 0x05){
+				  IsVideoOn = true;
+				}
+				
+				/*
         mdelay(10);
         if (strncmp((char*)buf+5, "GET /", 5) == 0 || strncmp((char*)buf+5, "POST /", 6) == 0) { // Receives a HTTP(S) get/post request.
             static int i=0;
@@ -1047,14 +997,15 @@ void handleRxSNIC(uint8_t* buf, int len)
              for (i=0; i<sentsize; i++) {
                 printf("%c", buf[5+i]);
             }                                              // it can be used for more data communication (using send from socket).
-            closeSocket((int8u)sock,seqNo++); }
+            closeSocket((int8u)sock,seqNo++); }*/
     }
     break;
 
     case SNIC_TCP_CLIENT_SOCKET_IND: {
         int8u listen_sock = buf[2];
-        printf("Accepted connection from %i.%i.%i.%i\n\r", buf[4], buf[5], buf[6], buf[7]);
-        printf("Connection socket: %d\n\r", buf[3]);
+			  char strtmp[20];
+			  sprintf(strtmp, "%d on %i.%i.%i.%i", buf[3], buf[4], buf[5], buf[6], buf[7]);
+			  LCD_DisplayStringLine(LINE(4), strtmp);
 
     }
     break;
@@ -1071,65 +1022,10 @@ void handleRxSNIC(uint8_t* buf, int len)
         break;
     }
 
-    case SNIC_HTTP_REQ|0x80:
-    case SNIC_HTTPS_REQ|0x80:
-    case SNIC_HTTP_MORE_REQ|0x80: {	
-        char *contentT = "";
-        unsigned short len = *((short*)&buf[4]);
-        short contTLen = 0;
-        unsigned short moreData = len & 0x8000;	
-        char more[10] = {0};
-        int8u seq = buf[1];
-        short status = *((short*)&buf[2]);
-                
-        status = swap16(status);
-        len = swap16(len);
-        
-        if (subCmdId == (SNIC_HTTP_MORE_REQ|0x80))
-            strcpy(more, "more ");
-        len &= 0x7fff;
-        
-        if (status >= 100) {
-            contentT = (char*)&buf[6];;
-            contTLen = strlen(contentT)+1;
-        }
-        
-        if (status < 100) {
-            printf("\nHTTP %sRSP code: %d, seq#: %d\n\r", more, status, seq);
-            break;
-        }
-
-        printf("\nHTTP %sRSP code: %d, seq#: %d, Content Length: %d, Type: %s, More data: %s\n\r", more, status, seq, len, contentT, moreData?"yes":"no");
-        isPrintable = 0;
-        if (contTLen && (strstr(contentT, "text") || strstr(contentT, "xml") ||
-            strstr(contentT, "javascript") || strstr(contentT, "html") ||
-            strstr(contentT, "json"))) {
-            isPrintable = 1;
-            buf[6+contTLen+len] = 0;
-            printf("Content: \n%s\n\r", buf+6+contTLen);
-        }
-    }
-    break;
-    case SNIC_HTTP_RSP_IND: {
-                int8u seq = buf[1];
-                unsigned short moreData;
-                unsigned short len = *((short*)&buf[2]);
-                len = swap16(len);
-                moreData = len & 0x8000;
-                len &= 0x7fff; 
-                printf("\nHTTP RSP indication, seq#: %d, content length: %d, More data: %s\n\r", seq, len, moreData?"yes":"no");
-                if (isPrintable) { 
-                    buf[4+len] = 0;
-                    printf("Content: \n%s\n\r", buf+4);
-                }
-	}
-	break;
-
     default:
         break;
 
     }
-    printf(".\n\r");
 }
 
 void SendSNIC(unsigned char *buf, int size)
@@ -1138,53 +1034,5 @@ void SendSNIC(unsigned char *buf, int size)
     int16u port = udpDestPort;
     sendUDPDone = 0;
     udpSendFromSock(IP, port, mysock, 0, buf, size, seqNo++);
-}
-
-
-int fillNSendHttpReq(int8u seq, char* domain, char* uri, char method, char* contentType, char* otherHeader, int contentLen, char* content, unsigned char timeout, char moreData, char isHttps)
-{
-    char *ptr = NULL;
-    int8u buf[1024];
-    int16u encodedLen = moreData?contentLen|0x8000:contentLen;
-    memset(buf, 0, sizeof(buf));
-    buf[0] = SNIC_HTTP_REQ;
-    buf[1] = seq;
-    *((int16u*)&buf[2]) = 0x5000; //swapped
-    buf[4] = method;
-    buf[5] = timeout;
-    
-    if (isHttps) {
-        buf[0] = SNIC_HTTPS_REQ;
-        *((int16u*)&buf[2]) = 0xbb01; // 443 swapped 
-    }
-
-    ptr = (char*)buf+6;
-    ptr += sprintf(ptr, "%s", domain)+1;
-    ptr += sprintf(ptr, "%s", uri)+1;
-    ptr += sprintf(ptr, "%s", contentType)+1;
-    ptr += sprintf(ptr, "%s", otherHeader)+1;
-    *((int16u*)ptr) = swap16(encodedLen);
-    ptr += 2;
-    if (contentLen) 
-        memcpy(ptr, content, contentLen);
-
-    serial_transmit(CMD_ID_SNIC, buf, ptr-(char*)buf+contentLen, ACK_NOT_REQUIRED);
-    return 0;
-}
-/*add HttpMoreReq cmd*/
-int fillNSendHttpMoreReq(int8u seq, int contentLen, char* content, char moreData)
-{
-    int8u buf[1024];
-    int16u len = moreData?contentLen|0x8000:contentLen;
-    buf[0] = SNIC_HTTP_MORE_REQ;
-    buf[1] = seq;
-    *((int16u*)&buf[2]) = swap16(len);
-
-    if (contentLen+4 > sizeof(buf))
-        return -1;
-
-    memcpy(&buf[4], content, contentLen);
-    serial_transmit(CMD_ID_SNIC, buf, contentLen+4, ACK_NOT_REQUIRED);
-    return 0;
 }
 

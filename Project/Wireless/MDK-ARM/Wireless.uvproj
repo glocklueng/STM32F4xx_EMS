@@ -367,7 +367,7 @@
               <MiscControls></MiscControls>
               <Define>USE_STDPERIPH_DRIVER,STM32F4XX,HSE_VALUE=8000000</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\..\Libraries\STM32F4xx_StdPeriph_Driver\inc;..\..\..\Libraries\CMSIS\Device\ST\STM32F4xx\Include;..\..\..\Libraries\CMSIS\Include;..\..\..\Utilities\STM32F4-Discovery;..\..\..\Utilities\SN8200;..\inc</IncludePath>
+              <IncludePath>..\..\..\Libraries\STM32F4xx_StdPeriph_Driver\inc;..\..\..\Libraries\CMSIS\Device\ST\STM32F4xx\Include;..\..\..\Utilities\SN8200;..\..\..\Utilities\STM32F4-Discovery;..\inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>

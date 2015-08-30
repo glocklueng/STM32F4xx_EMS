@@ -8,9 +8,9 @@
 #define MAX_PAYLOAD_LEN 8000
 
 // Special character defines
-#define SOM_CHAR 0x02     //0000 0010
-#define EOM_CHAR 0x04     //0000 0100
-#define ESC_CHAR 0x10     //0000 0110
+#define SOM_CHAR 0x02
+#define EOM_CHAR 0x04
+#define ESC_CHAR 0x10
 #define ACK_CMD	0x7F
 #define NAK_CMD 0x00
 
