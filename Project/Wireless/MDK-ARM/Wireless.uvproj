@@ -445,6 +445,16 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\Utilities\SN8200\sn8200_hal.c</FilePath>
             </File>
+            <File>
+              <FileName>sn8200_snic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Utilities\SN8200\sn8200_snic.c</FilePath>
+            </File>
+            <File>
+              <FileName>sn8200_wifi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Utilities\SN8200\sn8200_wifi.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

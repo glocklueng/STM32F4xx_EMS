@@ -14,6 +14,8 @@
 #include <stdbool.h>
 #include "sn8200_api.h"
 #include "sn8200_core.h"
+#include "sn8200_wifi.h"
+#include "sn8200_snic.h"
 #include "delay.h"
 
 #include "stm32f4_discovery.h"
@@ -26,34 +28,27 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-
-//bool quit_flag = false;
-
-//uint8_t key;
 uint8_t seqNo = 0;
 
 int8_t mysock = -1;
 int8u TxBuf[TEST_BUFFERSIZE];
 
-extern int ipok, joinok;
 extern int destIP, srcIP;
 extern long int destPort, srcPort;
-//extern int32u pktcnt;
 extern int8u APOnOff;
 
-extern char Portstr[8];
 char sockConnected = -1;
 char sockClosed = -1;
-extern bool IsCreateSocketResponsed ;
+//extern bool IsCreateSocketResponsed;
 extern int32u timeout;
-extern bool IsWIFIJoinResponsed ;
+//extern bool IsWIFIJoinResponsed ;
 extern int32u selfIP;
 
 bool IsVideoOn = false;
 bool IsAudioOn = false;
 bool IsSensorOn = false;
 
-//timeout, Portstr, destIP, destPort, sockConnected, sockClosed , TEST_BUFFERSIZE
+//timeout, destIP, destPort, sockConnected, sockClosed , TEST_BUFFERSIZE
 /* Private function prototypes -----------------------------------------------*/
 
 
@@ -75,32 +70,15 @@ int main(void)
   SN8200_API_Init(921600);
 
 	//GetStatus(seqNo++);
-    WifiOn(seqNo++);
-	  ApOnOff(1, seqNo++);
-	  if(SN8200_API_HasInput()) {
-			ProcessSN8200Input();
-		}
-		SnicInit(seqNo++);
-    SnicGetDhcp(seqNo++);
-		if(SN8200_API_HasInput()) {
-			ProcessSN8200Input();
-		}
-		/* TCPClient 
-    mysock = -1;
-    tcpCreateSocket(0, 0xFF, 0xFF, seqNo++, SNIC_TCP_CREATE_SOCKET_REQ);
-    if (mysock != -1) {
-			if (getTCPinfo() == CMD_ERROR) {
-				printf("Invalid Server\n\r");
-				return;
-			}
-      // This connection can receive data upto 0x0400=1K bytes at a time.
-      tcpConnectToServer(mysock, destIP, (unsigned short)destPort, 0x0400, 0x5, seqNo++);
-		}*/
-		
-		/* TCPServer */
-		setTCPinfo();
-		mysock = -1;
-		tcpCreateSocket(1, srcIP, (unsigned short)srcPort, seqNo++, SNIC_TCP_CREATE_SOCKET_REQ);
+  WifiOn(seqNo++);
+	ApOnOff(1, seqNo++);
+	
+  SnicInit(seqNo++);
+  SnicGetDhcp(seqNo++);
+	/* TCPServer */
+  setTCPinfo();
+	mysock = -1;
+	tcpCreateSocket(1, srcIP, (unsigned short)srcPort, seqNo++, SNIC_TCP_CREATE_SOCKET_REQ);
 		if (mysock != -1) {
 			// This connection can receive data upto TEST_BUFFERSIZE at a time.
 			tcpCreateConnection(mysock, TEST_BUFFERSIZE, 0x5, seqNo++);
@@ -114,27 +92,25 @@ int main(void)
 		  len = (int)strlen(teststr);
 			if(IsVideoOn)
 			{
-				
+				//video();
 			}
 			if(IsAudioOn)
 			{
-				
+				//audio();
 			}
 			if(IsSensorOn)
 			{
-        //sendFromSock(sock, (int8u*)teststr, len, 2, seqNo++);
+				//sensor();
+        sendFromSock(sock, (int8u*)teststr, len, 2, seqNo++);
 			}
 			if(SN8200_API_HasInput()) {
 				ProcessSN8200Input();
 			}
 		}
 		
-		
-		
-		/* Send From Socket */
     /*
+		//Send From Socket 
     char tempstr[2] = {0};
-    int8u datamode;
     char sockstr[8];
     int32u sock;
     char teststr[128];
@@ -144,24 +120,13 @@ int main(void)
     scanf("%s", sockstr);
     sock = strtol(sockstr, NULL, 0);
 
-    printf("Content Option? (0: Default  1: User specific) \n\r");
-    scanf("%s", tempstr);
-    datamode = atoi(tempstr);
-
-        if (datamode) {
-            printf("Enter payload to send (up to 128 bytes): \n\r");
-            scanf("%s", teststr);
-            len = (int)strlen(teststr);
-            sendFromSock(sock, (int8u*)teststr, len, 2, seqNo++);
-        } else {
-            sendFromSock(sock, TxBuf, TEST_BUFFERSIZE, 2, seqNo++);
-            pktcnt = 0;
-        }
-				*/
+    printf("Enter payload to send (up to 128 bytes): \n\r");
+    scanf("%s", teststr);
+    len = (int)strlen(teststr);
+    sendFromSock(sock, (int8u*)teststr, len, 2, seqNo++);
+		*/
 }
 
-
-/* WifiScan(seqNo++); */
 /* WifiDisconn(seqNo++);
    WifiJoin(seqNo++);
    SnicInit(seqNo++);

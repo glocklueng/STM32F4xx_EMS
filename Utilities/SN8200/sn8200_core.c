@@ -1,6 +1,8 @@
 #include "sn8200_hal.h"
 #include "sn8200_core.h"
 #include "sn8200_api.h"
+#include "sn8200_wifi.h"
+#include "sn8200_snic.h"
 #include <string.h>
 #include <stdio.h>
 #define SERIAL_TX(x) dummy_tx(x)
