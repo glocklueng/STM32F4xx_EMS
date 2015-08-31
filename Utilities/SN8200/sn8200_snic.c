@@ -224,6 +224,7 @@ void handleRxSNIC(uint8_t* buf, int len)
 {
     uint8_t subCmdId = buf[0];
     static int times = 0;
+	  char strtmp[20];
 
     switch (subCmdId) {
 
@@ -249,7 +250,6 @@ void handleRxSNIC(uint8_t* buf, int len)
     case SNIC_GET_DHCP_INFO_RSP: {
         IsSNICGetDHCPInfoResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
-					  char strtmp[20];
 					sprintf(strtmp, "IP:%i.%i.%i.%i", buf[9],buf[10],buf[11],buf[12]);
 					LCD_DisplayStringLine(LINE(4), (uint8_t*)&strtmp);
             //save IP
@@ -263,7 +263,6 @@ void handleRxSNIC(uint8_t* buf, int len)
     case SNIC_UDP_CREATE_SOCKET_RSP: {
         IsCreateSocketResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
-					char strtmp[20];
 					mysock = buf[3];
 					sprintf(strtmp, "Socket %d opened", mysock);
 					LCD_DisplayStringLine(LINE(5), (uint8_t*)&strtmp);
@@ -304,7 +303,6 @@ void handleRxSNIC(uint8_t* buf, int len)
         int32u sentsize;
         IsSNICSendFromSocketResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
-					  char strtmp[20];
             pktcnt ++;
             sentsize = ((int32u)(buf[3] << 8) | (int32u)buf[4]);
 					  sprintf(strtmp, "pkt %d, %d bytes sent", pktcnt, sentsize);
@@ -317,38 +315,43 @@ void handleRxSNIC(uint8_t* buf, int len)
     case SNIC_CONNECTION_RECV_IND: {
         //int32u sentsize = ((int32u)(buf[3] << 8) | (int32u)buf[4]);
         int32u sock = (int32u)buf[2];
-			  char strtmp[20];
-			  sprintf(strtmp, "socket %d rvd %d", sock, buf[5]);
-			  LCD_DisplayStringLine(LINE(6), (uint8_t*)&strtmp);
+			  //sprintf(strtmp, "socket %d rvd %d", sock, buf[5]);
+			  //LCD_DisplayStringLine(LINE(6), (uint8_t*)&strtmp);
 			  if(buf[5] == 0x00){
 					IsSensorOn = false;
+					LCD_DisplayStringLine(LINE(7), "Sensor Off");
 				}
 				if(buf[5] == 0x01){
 				  IsSensorOn = true;
+					LCD_DisplayStringLine(LINE(7), "Sensor On ");
 				}
 				if(buf[5] == 0x02){
 				  IsAudioOn = false;
+					LCD_DisplayStringLine(LINE(8), "Audio Off ");
 				}
 				if(buf[5] == 0x03){
 				  IsAudioOn = true;
+					LCD_DisplayStringLine(LINE(8), "Audio On  ");
 				}
 				if(buf[5] == 0x04){
 				  IsVideoOn = false;
+					LCD_DisplayStringLine(LINE(9), "Video Off ");
 				}
 				if(buf[5] == 0x05){
 				  IsVideoOn = true;
+					LCD_DisplayStringLine(LINE(9), "Video On ");
 				}
     }
     break;
 
     case SNIC_TCP_CLIENT_SOCKET_IND: {
         //int8u listen_sock = buf[2];
-			  char strtmp[20];
 			  sprintf(strtmp, "%d on %i.%i.%i.%i", buf[3], buf[4], buf[5], buf[6], buf[7]);
 			  LCD_DisplayStringLine(LINE(4), (uint8_t*)&strtmp);
 
     }
     break;
+		/*
     case SNIC_UDP_RECV_IND: {
         printf("%d %d\n\r", times++, htons(*((int16u*)&buf[9])));
     }
@@ -361,7 +364,7 @@ void handleRxSNIC(uint8_t* buf, int len)
         }
         sendUDPDone = 1;
         break;
-    }
+    }*/
 
     default:
         break;

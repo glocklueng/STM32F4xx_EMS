@@ -50,7 +50,7 @@ bool IsSensorOn = false;
 
 //timeout, destIP, destPort, sockConnected, sockClosed , TEST_BUFFERSIZE
 /* Private function prototypes -----------------------------------------------*/
-
+void LCD_Init(void);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -61,21 +61,20 @@ bool IsSensorOn = false;
   */
 int main(void)
 {
-	STM32f4_Discovery_LCD_Init();
-  LCD_Clear(LCD_COLOR_WHITE);           // Clear the LCD
-  LCD_SetBackColor(LCD_COLOR_BLUE);     // Set the LCD Back Color
-  LCD_SetTextColor(LCD_COLOR_WHITE);    // Set the LCD Text Color
-	
+	LCD_Init();
   SysTick_Configuration();
   SN8200_API_Init(921600);
 
-	//GetStatus(seqNo++);
+	//WiFi Command
   WifiOn(seqNo++);
 	ApOnOff(1, seqNo++);
+	GetStatus(seqNo++);
 	
+	//SNIC Command
   SnicInit(seqNo++);
   SnicGetDhcp(seqNo++);
-	/* TCPServer */
+	
+	// TCPServer
   setTCPinfo();
 	mysock = -1;
 	tcpCreateSocket(1, srcIP, (unsigned short)srcPort, seqNo++, SNIC_TCP_CREATE_SOCKET_REQ);
@@ -86,10 +85,6 @@ int main(void)
 		
 		/* loop */
 		while(1){
-			char teststr[128] = "2";
-		  int32u sock = 5;
-	    int len;
-		  len = (int)strlen(teststr);
 			if(IsVideoOn)
 			{
 				//video();
@@ -100,41 +95,46 @@ int main(void)
 			}
 			if(IsSensorOn)
 			{
-				//sensor();
-        sendFromSock(sock, (int8u*)teststr, len, 2, seqNo++);
+				char teststr[128] = "2";
+				//int8u teststr[128];
+		    int32u sock = 5;
+	      int len;
+				/*
+				float tmp = 37.7;
+				teststr[0] = 0;
+				LCD_DisplayStringLine(LINE(2),"Hello");
+				memcpy(teststr + 1, (int8u*)&tmp, 4);
+				*/
+		    len = (int)strlen((char*)&teststr);
+				
+        sendFromSock(5, (int8u*)teststr, len, 2, seqNo++);
+				//sendFromSock(sock, teststr, len, 2, seqNo++);
 			}
 			if(SN8200_API_HasInput()) {
 				ProcessSN8200Input();
 			}
 		}
 		
-    /*
-		//Send From Socket 
-    char tempstr[2] = {0};
-    char sockstr[8];
-    int32u sock;
-    char teststr[128];
-    int len;
-
-    printf("Enter socket number to send from: \n\r");
-    scanf("%s", sockstr);
-    sock = strtol(sockstr, NULL, 0);
-
-    printf("Enter payload to send (up to 128 bytes): \n\r");
-    scanf("%s", teststr);
-    len = (int)strlen(teststr);
-    sendFromSock(sock, (int8u*)teststr, len, 2, seqNo++);
+		/* // Shut down all
+		SnicCleanup(seqNo++);
+		WifiDisconn(seqNo++);
+		WifiOff(seqNo++); 
 		*/
+		
+}
+
+//Initial LCD Display
+void LCD_Init(void){
+	STM32f4_Discovery_LCD_Init();         // Initial LCD
+  LCD_Clear(LCD_COLOR_WHITE);           // Clear the LCD
+  LCD_SetBackColor(LCD_COLOR_BLUE);     // Set the LCD Back Color
+  LCD_SetTextColor(LCD_COLOR_WHITE);    // Set the LCD Text Color
 }
 
 /* WifiDisconn(seqNo++);
    WifiJoin(seqNo++);
    SnicInit(seqNo++);
    SnicIPConfig(seqNo++); */
-/* SnicCleanup(seqNo++);
-   WifiDisconn(seqNo++); */
-/* SnicCleanup(seqNo++);
-   WifiOff(seqNo++);     */
 /* //udp send 
    int i;
    udpCreateSocket(0, 0, 0, seqNo++);
