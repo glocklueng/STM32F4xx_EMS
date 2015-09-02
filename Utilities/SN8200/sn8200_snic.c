@@ -9,11 +9,8 @@
 #include "stm32f4_discovery.h"
 #include "stm32f4_discovery_lcd.h"
 
-bool IsSNICIPConfigResponsed = false;
 bool IsSNICGetDHCPInfoResponsed = false;
-bool IsSNICTCPConnectToServerResponsed = false;
 bool IsSNICSendFromSocketResponsed = false;
-bool IsSNICUDPSendFromSocketResponsed = false;
 bool IsCreateSocketResponsed = false;
 
 extern bool IsVideoOn;
@@ -24,10 +21,8 @@ extern int32u timeout;
 
 int32u pktcnt = 0;
 int32u selfIP = 0;
-int ipok = 0;
 
 extern int8_t mysock;
-extern int8s sockClosed;
 extern int8s sockConnected;
 
 volatile int8u sendUDPDone = 0;
@@ -55,34 +50,34 @@ void setUDPinfo(void)
 //initialize the SNIC framework on SN8200
 void SnicInit(int8u seq)
 {
-    int8u buf[4];
+    int8u payload[4];
     int tmp;
     tmp = 0x00;			//The Default receive buffer size
-    buf[0] = SNIC_INIT_REQ;
-    buf[1] = seq;
-    memcpy(buf+2, (uint8_t*)&tmp, 2);
-    serial_transmit(CMD_ID_SNIC, buf, 4, ACK_NOT_REQUIRED);
+    payload[0] = SNIC_INIT_REQ;
+    payload[1] = seq;
+    memcpy(payload+2, (uint8_t*)&tmp, 2);
+    serial_transmit(CMD_ID_SNIC, payload, 4, ACK_NOT_REQUIRED);
 }
 
 //close the SNIC framework on SN8200
 void SnicCleanup(int8u seq)
 {
-    int8u buf[2];
-    buf[0] = SNIC_CLEANUP_REQ;
-    buf[1] = seq;
-    serial_transmit(CMD_ID_SNIC, buf, 2, ACK_NOT_REQUIRED);
+    int8u payload[2];
+    payload[0] = SNIC_CLEANUP_REQ;
+    payload[1] = seq;
+    serial_transmit(CMD_ID_SNIC, payload, 2, ACK_NOT_REQUIRED);
 }
 
-
+/*
 void SnicIPConfig(int8u seq)
 {
-    int8u buf[16];
+    int8u payload[16];
 
-    buf[0] = SNIC_IP_CONFIG_REQ;
-    buf[1] = seq;
-    buf[2] = 0; //STA
-    buf[3] = 1; //DHCP
-    serial_transmit(CMD_ID_SNIC, buf, 4, ACK_NOT_REQUIRED);
+    payload[0] = SNIC_IP_CONFIG_REQ;
+    payload[1] = seq;
+    payload[2] = 0; //STA
+    payload[3] = 1; //DHCP
+    serial_transmit(CMD_ID_SNIC, payload, 4, ACK_NOT_REQUIRED);
 
     timeout = 10000;
     while (timeout--) {
@@ -95,7 +90,7 @@ void SnicIPConfig(int8u seq)
         }
         mdelay(1);
     }
-}
+}*/
 
 //Query the DHCP information for a particular interface
 void SnicGetDhcp(int8u seq)
@@ -223,7 +218,7 @@ int sendFromSock(int8u shortSocket, int8u * sendBuf, int16u len, int8u timeout, 
 void handleRxSNIC(uint8_t* buf, int len)
 {
     uint8_t subCmdId = buf[0];
-    static int times = 0;
+    //static int times = 0;
 	  char strtmp[20];
 
     switch (subCmdId) {
@@ -235,7 +230,8 @@ void handleRxSNIC(uint8_t* buf, int len)
 					  LCD_DisplayStringLine(LINE(9), "Socket closed");
     }
     break;
-
+		
+		/*
     case SNIC_IP_CONFIG_RSP: {
         IsSNICIPConfigResponsed = true;
         ipok = 0;
@@ -245,17 +241,17 @@ void handleRxSNIC(uint8_t* buf, int len)
         } else
 				    LCD_DisplayStringLine(LINE(9), "IPConfig fail");
     }
-    break;
+    break;*/
 
     case SNIC_GET_DHCP_INFO_RSP: {
         IsSNICGetDHCPInfoResponsed = true;
         if (SNIC_SUCCESS == buf[2]) {
 					sprintf(strtmp, "IP:%i.%i.%i.%i", buf[9],buf[10],buf[11],buf[12]);
-					LCD_DisplayStringLine(LINE(4), (uint8_t*)&strtmp);
+					LCD_DisplayStringLine(LINE(3), (uint8_t*)strtmp);
             //save IP
-            memcpy(&selfIP, buf+9, 4);
+          memcpy(&selfIP, buf+9, 4);
         } else
-				    LCD_DisplayStringLine(LINE(4), "IP not assigned");
+				    LCD_DisplayStringLine(LINE(3), "IP not assigned");
     }
     break;
 
@@ -265,28 +261,13 @@ void handleRxSNIC(uint8_t* buf, int len)
         if (SNIC_SUCCESS == buf[2]) {
 					mysock = buf[3];
 					sprintf(strtmp, "Socket %d opened", mysock);
-					LCD_DisplayStringLine(LINE(5), (uint8_t*)&strtmp);
+					LCD_DisplayStringLine(LINE(4), (uint8_t*)strtmp);
         } else
-				  LCD_DisplayStringLine(LINE(5), "Socket creation failed");
+				  LCD_DisplayStringLine(LINE(4), "Socket creation failed");
     }
     break;
-
-    case SNIC_TCP_CONNECT_TO_SERVER_RSP: {
-        IsSNICTCPConnectToServerResponsed = true;
-        if (SNIC_CONNECT_TO_SERVER_PENDING == buf[2] || SNIC_SUCCESS == buf[2])
-            ;
-        else
-            printf("Unable to connect server\n\r");
-    }
-    break;
-    
-    case SNIC_TCP_CREATE_CONNECTION_RSP:
-            {
-                if (SNIC_SUCCESS != buf[2])
-                    printf("Unable to create TCP server\n\r");
-            }
-    break;
-
+		
+		/*
     case SNIC_TCP_CONNECTION_STATUS_IND: {
         if (SNIC_CONNECTION_UP == buf[2]) {
             printf("Socket connection UP\n\r");
@@ -297,7 +278,7 @@ void handleRxSNIC(uint8_t* buf, int len)
             sockClosed = buf[3];
         }
     }
-    break;
+    break;*/
 
     case SNIC_SEND_RSP: {
         int32u sentsize;
@@ -305,18 +286,13 @@ void handleRxSNIC(uint8_t* buf, int len)
         if (SNIC_SUCCESS == buf[2]) {
             pktcnt ++;
             sentsize = ((int32u)(buf[3] << 8) | (int32u)buf[4]);
-					  sprintf(strtmp, "pkt %d, %d bytes sent", pktcnt, sentsize);
-            //printf("pkt %d, %d bytes sent \n\r", pktcnt, sentsize);
-					  LCD_DisplayStringLine(LINE(7), (uint8_t*)&strtmp);
+					sprintf(strtmp, "pkt %d:%d bytes", pktcnt, sentsize);
+					  LCD_DisplayStringLine(LINE(6), (uint8_t*)strtmp);
         }
     }
     break;
 
     case SNIC_CONNECTION_RECV_IND: {
-        //int32u sentsize = ((int32u)(buf[3] << 8) | (int32u)buf[4]);
-        int32u sock = (int32u)buf[2];
-			  //sprintf(strtmp, "socket %d rvd %d", sock, buf[5]);
-			  //LCD_DisplayStringLine(LINE(6), (uint8_t*)&strtmp);
 			  if(buf[5] == 0x00){
 					IsSensorOn = false;
 					LCD_DisplayStringLine(LINE(7), "Sensor Off");
@@ -327,44 +303,29 @@ void handleRxSNIC(uint8_t* buf, int len)
 				}
 				if(buf[5] == 0x02){
 				  IsAudioOn = false;
-					LCD_DisplayStringLine(LINE(8), "Audio Off ");
+					LCD_DisplayStringLine(LINE(8), "Audio  Off");
 				}
 				if(buf[5] == 0x03){
 				  IsAudioOn = true;
-					LCD_DisplayStringLine(LINE(8), "Audio On  ");
+					LCD_DisplayStringLine(LINE(8), "Audio  On ");
 				}
 				if(buf[5] == 0x04){
 				  IsVideoOn = false;
-					LCD_DisplayStringLine(LINE(9), "Video Off ");
+					LCD_DisplayStringLine(LINE(9), "Video  Off");
 				}
 				if(buf[5] == 0x05){
 				  IsVideoOn = true;
-					LCD_DisplayStringLine(LINE(9), "Video On ");
+					LCD_DisplayStringLine(LINE(9), "Video  On ");
 				}
     }
     break;
 
     case SNIC_TCP_CLIENT_SOCKET_IND: {
-        //int8u listen_sock = buf[2];
-			  sprintf(strtmp, "%d on %i.%i.%i.%i", buf[3], buf[4], buf[5], buf[6], buf[7]);
-			  LCD_DisplayStringLine(LINE(4), (uint8_t*)&strtmp);
-
+			sockConnected = buf[3];
+			sprintf(strtmp, "Conn from %i.%i.%i.%i", buf[4], buf[5], buf[6], buf[7]);
+			LCD_DisplayStringLine(LINE(4), (uint8_t*)strtmp);
+			break;
     }
-    break;
-		/*
-    case SNIC_UDP_RECV_IND: {
-        printf("%d %d\n\r", times++, htons(*((int16u*)&buf[9])));
-    }
-    break;
-		
-    case SNIC_UDP_SEND_FROM_SOCKET_RSP: {
-        IsSNICUDPSendFromSocketResponsed = true;
-        if (SNIC_SUCCESS != buf[2]) {
-            printf("UDP Send bad\n\r");
-        }
-        sendUDPDone = 1;
-        break;
-    }*/
 
     default:
         break;

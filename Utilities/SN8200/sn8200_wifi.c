@@ -11,12 +11,9 @@
 
 int8u APOnOff = 1;
 
-int joinok = 0;
-
 extern int32u timeout;
 
 bool IsWIFIGetStatusResponsed = false;
-bool IsWIFIJoinResponsed = false;
 bool IsWIFIApCtrlResponsed = false;
 
 //Get the WiFi status from SN8200
@@ -25,7 +22,7 @@ void GetStatus(int8u seq)
     int8u payload[4];
     payload[0] = WIFI_GET_STATUS_REQ;
     payload[1] = seq;
-    payload[2] = 0;
+    payload[2] = 1; // 0 STA ; 1 AP
     serial_transmit(CMD_ID_WIFI, payload, 3, ACK_NOT_REQUIRED);
 
     timeout = 10000;
@@ -85,55 +82,6 @@ void ApOnOff(int8u OnOff, int8u seq)
     }
 }
 
-/*
-void WifiJoin(char* SSID, int8u secMode, char* secKey, int8u seq)
-{
-	int8u payload[128];
-  int8u *p = payload;
-	
-	char SSID[32];
-	int SSIDlen = 0;
-	int8u secMode = 0;  //0 for open, 2 for WPA TKIP, 4 for WPA2 AES, 6 for WPA2 MIXED
-	char secKey[64];
-	int8u Keylen = 0;
-  
-
-    *p++ = WIFI_JOIN_REQ;
-    *p++ = seq;
-
-    memcpy(p, SSID, strlen(SSID));
-
-    p += strlen(SSID);
-    *p++ = 0x00;
-
-    if (secMode) {
-        Keylen = (unsigned char)strlen(secKey);
-    }
-
-    *p++ = secMode;
-    *p++ = Keylen;
-
-    if (Keylen) {
-        memcpy(p, secKey, Keylen);
-        p += Keylen;
-    }
-    serial_transmit(CMD_ID_WIFI, payload, (int)(p - buf), ACK_NOT_REQUIRED);
-		
-    timeout = 10000;
-    while (timeout--) {
-        if(SN8200_API_HasInput()) {
-            ProcessSN8200Input();
-        }
-        if(IsWIFIJoinResponsed) {
-            IsWIFIJoinResponsed = false;
-            break;
-        }
-        mdelay(1);
-    }
-    joinok = 0;
-}
-*/
-
 void WifiDisconn(int8u seq)
 {
     int8u payload[2];
@@ -173,37 +121,18 @@ void handleRxWiFi(int8u* buf, int len)
 			break;
 		}
 
-    case WIFI_JOIN_RSP: {
-			IsWIFIJoinResponsed = true;
-			if (WIFI_SUCCESS == buf[2])
-				LCD_DisplayStringLine(LINE(2), "Join success   ");
-			else
-				LCD_DisplayStringLine(LINE(2), "Join fail      ");
-			break;
-		}
-
     case WIFI_AP_CTRL_RSP: {
 			IsWIFIApCtrlResponsed = true;
 			if (WIFI_SUCCESS == buf[2]) {
 				if (APOnOff)
-					LCD_DisplayStringLine(LINE(3), "AP is ON");
+					LCD_DisplayStringLine(LINE(2), "AP is ON");
 				else
-					LCD_DisplayStringLine(LINE(3), "AP is OFF");
+					LCD_DisplayStringLine(LINE(2), "AP is OFF");
 			} 
 			else
-			  LCD_DisplayStringLine(LINE(3), "AP control fail");
+			  LCD_DisplayStringLine(LINE(2), "AP control fail");
 			break;
 		}
-
-    case WIFI_NETWORK_STATUS_IND: {
-			if (WIFI_NETWORK_UP == buf[3]) {
-				LCD_DisplayStringLine(LINE(2), "Network UP     ");
-        joinok = 1;
-			} else {
-				LCD_DisplayStringLine(LINE(2), "Network Down   ");
-			}
-    }
-    break;
 
     default:
         break;

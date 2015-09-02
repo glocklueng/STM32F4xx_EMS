@@ -38,17 +38,15 @@ extern long int destPort, srcPort;
 extern int8u APOnOff;
 
 char sockConnected = -1;
-char sockClosed = -1;
-//extern bool IsCreateSocketResponsed;
+//char sockClosed = -1;
 extern int32u timeout;
-//extern bool IsWIFIJoinResponsed ;
 extern int32u selfIP;
 
 bool IsVideoOn = false;
 bool IsAudioOn = false;
 bool IsSensorOn = false;
+int8u teststr[128];
 
-//timeout, destIP, destPort, sockConnected, sockClosed , TEST_BUFFERSIZE
 /* Private function prototypes -----------------------------------------------*/
 void LCD_Init(void);
 
@@ -64,7 +62,10 @@ int main(void)
 	LCD_Init();
   SysTick_Configuration();
   SN8200_API_Init(921600);
-
+	
+	LCD_DisplayStringLine(LINE(7), "Sensor Off");
+	LCD_DisplayStringLine(LINE(8), "Audio  Off");
+	LCD_DisplayStringLine(LINE(9), "Video  Off");
 	//WiFi Command
   WifiOn(seqNo++);
 	ApOnOff(1, seqNo++);
@@ -87,28 +88,38 @@ int main(void)
 		while(1){
 			if(IsVideoOn)
 			{
+				teststr[0] = 0x02;
 				//video();
+				
 			}
 			if(IsAudioOn)
 			{
+				teststr[0] = 0x01;
 				//audio();
 			}
 			if(IsSensorOn)
 			{
-				char teststr[128] = "2";
-				//int8u teststr[128];
-		    int32u sock = 5;
-	      int len;
-				/*
-				float tmp = 37.7;
-				teststr[0] = 0;
-				LCD_DisplayStringLine(LINE(2),"Hello");
-				memcpy(teststr + 1, (int8u*)&tmp, 4);
-				*/
-		    len = (int)strlen((char*)&teststr);
+				int32u tmp[3]; 
+				char strtmp[20];
+				tmp[0] = 23;
+				tmp[1] = 34;
+				tmp[2] = 14;
+				teststr[0] = 0x00;
 				
-        sendFromSock(5, (int8u*)teststr, len, 2, seqNo++);
-				//sendFromSock(sock, teststr, len, 2, seqNo++);
+				sprintf(strtmp, "Send:%d %d %d", tmp[0], tmp[1], tmp[2]);
+				LCD_DisplayStringLine(LINE(5), (uint8_t*)strtmp );
+				tmp[0] = swap32(tmp[0]);
+				tmp[1] = swap32(tmp[1]);
+				tmp[2] = swap32(tmp[2]);
+				memcpy(teststr + 1, (int8u*)&tmp[0], 4);
+				memcpy(teststr + 5, (int8u*)&tmp[1], 4);
+				memcpy(teststr + 9, (int8u*)&tmp[2], 4);
+				/*
+				char teststr[128] = "23";
+				int len = (int)strlen((char*)&teststr);
+				sendFromSock(sockConnected, (int8u*)teststr, len, 2, seqNo++);
+				*/
+				sendFromSock(sockConnected, teststr, 13, 2, seqNo++);
 			}
 			if(SN8200_API_HasInput()) {
 				ProcessSN8200Input();
@@ -130,35 +141,6 @@ void LCD_Init(void){
   LCD_SetBackColor(LCD_COLOR_BLUE);     // Set the LCD Back Color
   LCD_SetTextColor(LCD_COLOR_WHITE);    // Set the LCD Text Color
 }
-
-/* WifiDisconn(seqNo++);
-   WifiJoin(seqNo++);
-   SnicInit(seqNo++);
-   SnicIPConfig(seqNo++); */
-/* //udp send 
-   int i;
-   udpCreateSocket(0, 0, 0, seqNo++);
-   if (mysock != -1) {
-      if (getUDPinfo() == CMD_ERROR) {
-          printf("Invalid Server\n\r");
-          break;
-            }
-            printf("Send %d\n\r", UDP_NUM_PKT);
-            for (i=0; i<UDP_NUM_PKT; i++) {
-                int si = i % TEST_BUFFERSIZE + 1;
-                SendSNIC(TxBuf, si);
-                printf("%d %d\n\r", i, si);
-            }
-
-            closeSocket(mysock,seqNo++);
-        }*/
-/*  //udp recv
-    int16u port = 43211;
-    int32u ip = 0xAC1F0001; // 172.31.0.1
-    udpCreateSocket(1, ip, port, seqNo++);
-    udpStartRecv(mysock, 2048, seqNo++);
-    break;*/
-
 
 #ifdef  USE_FULL_ASSERT
 
