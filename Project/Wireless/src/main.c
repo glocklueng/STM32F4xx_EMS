@@ -24,31 +24,30 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define TEST_BUFFERSIZE 128
-#define UDP_NUM_PKT 10
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+extern int8u APOnOff;
+extern int32u selfIP;
+extern int srcIP;
+extern long int srcPort;
+extern int8_t mysock;
+extern char sockConnected;
+extern int32u timeout;
+
 uint8_t seqNo = 0;
 
-int8_t mysock = -1;
-int8u TxBuf[TEST_BUFFERSIZE];
-
-extern int destIP, srcIP;
-extern long int destPort, srcPort;
-extern int8u APOnOff;
-
-char sockConnected = -1;
-//char sockClosed = -1;
-extern int32u timeout;
-extern int32u selfIP;
+//int8u TxBuf[TEST_BUFFERSIZE];
 
 bool IsVideoOn = false;
 bool IsAudioOn = false;
 bool IsSensorOn = false;
+bool IsSystemExit = false;
 int8u teststr[128];
 
 /* Private function prototypes -----------------------------------------------*/
 void LCD_Init(void);
+float getRandFloat(float, float);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -63,75 +62,67 @@ int main(void)
   SysTick_Configuration();
   SN8200_API_Init(921600);
 	
-	LCD_DisplayStringLine(LINE(7), "Sensor Off");
-	LCD_DisplayStringLine(LINE(8), "Audio  Off");
-	LCD_DisplayStringLine(LINE(9), "Video  Off");
 	//WiFi Command
   WifiOn(seqNo++);
 	ApOnOff(1, seqNo++);
 	GetStatus(seqNo++);
 	
 	//SNIC Command
+	SnicCleanup(seqNo++);
   SnicInit(seqNo++);
   SnicGetDhcp(seqNo++);
 	
 	// TCPServer
   setTCPinfo();
-	mysock = -1;
-	tcpCreateSocket(1, srcIP, (unsigned short)srcPort, seqNo++, SNIC_TCP_CREATE_SOCKET_REQ);
-		if (mysock != -1) {
-			// This connection can receive data upto TEST_BUFFERSIZE at a time.
-			tcpCreateConnection(mysock, TEST_BUFFERSIZE, 0x5, seqNo++);
-		}
-		
-		/* loop */
-		while(1){
-			if(IsVideoOn)
-			{
-				teststr[0] = 0x02;
+	//mysock = -1;
+	tcpCreateSocket(1, srcIP, (unsigned short)srcPort, seqNo++);
+	if (mysock != -1) {
+		// This connection can receive data upto TEST_BUFFERSIZE at a time.
+		tcpCreateConnection(mysock, TEST_BUFFERSIZE, 0x5, seqNo++);
+	}
+	/*
+	while(1){
+		char strtmp[20];
+		sprintf(strtmp,"%f",getTmptr());
+		LCD_DisplayStringLine(LINE(5), strtmp);
+	}*/
+	
+	/* loop */
+	while(1){
+		if (IsVideoOn) {
+			teststr[0] = 0x02;
 				//video();
-				
 			}
-			if(IsAudioOn)
-			{
+		if (IsAudioOn) {
 				teststr[0] = 0x01;
 				//audio();
 			}
-			if(IsSensorOn)
-			{
-				int32u tmp[3]; 
-				char strtmp[20];
-				tmp[0] = 23;
-				tmp[1] = 34;
-				tmp[2] = 14;
-				teststr[0] = 0x00;
-				
-				sprintf(strtmp, "Send:%d %d %d", tmp[0], tmp[1], tmp[2]);
-				LCD_DisplayStringLine(LINE(5), (uint8_t*)strtmp );
-				tmp[0] = swap32(tmp[0]);
-				tmp[1] = swap32(tmp[1]);
-				tmp[2] = swap32(tmp[2]);
-				memcpy(teststr + 1, (int8u*)&tmp[0], 4);
-				memcpy(teststr + 5, (int8u*)&tmp[1], 4);
-				memcpy(teststr + 9, (int8u*)&tmp[2], 4);
-				/*
-				char teststr[128] = "23";
-				int len = (int)strlen((char*)&teststr);
-				sendFromSock(sockConnected, (int8u*)teststr, len, 2, seqNo++);
-				*/
-				sendFromSock(sockConnected, teststr, 13, 2, seqNo++);
-			}
-			if(SN8200_API_HasInput()) {
-				ProcessSN8200Input();
-			}
+		if (IsSensorOn) {
+			float tmptr = getRandFloat(23.0f, 25.0f);
+			float hmd = getRandFloat(44.0f, 47.0f);
+			float ap = getRandFloat(1013.0f, 1024.0f);
+			teststr[0] = 0x00;
+			
+			memcpy(teststr + 1, (int8u*)&tmptr, 4);
+			memcpy(teststr + 5, (int8u*)&hmd, 4);
+			memcpy(teststr + 9, (int8u*)&ap, 4);
+			sendFromSock(sockConnected, teststr, 13, 2, seqNo++);
+			mdelay(10); 
 		}
-		
-		/* // Shut down all
-		SnicCleanup(seqNo++);
-		WifiDisconn(seqNo++);
-		WifiOff(seqNo++); 
-		*/
-		
+		if(SN8200_API_HasInput()) {
+			ProcessSN8200Input();
+		}
+		if(IsSystemExit) {
+			LCD_Clear(LCD_COLOR_WHITE);
+			break;
+		}
+	}
+	// Shut down all
+	SnicCleanup(seqNo++);
+	WifiDisconn(seqNo++);
+	//WifiOff(seqNo++);
+	GetStatus(seqNo++);
+	LCD_DisplayStringLine(LINE(1), "System Exit");
 }
 
 //Initial LCD Display
@@ -140,6 +131,22 @@ void LCD_Init(void){
   LCD_Clear(LCD_COLOR_WHITE);           // Clear the LCD
   LCD_SetBackColor(LCD_COLOR_BLUE);     // Set the LCD Back Color
   LCD_SetTextColor(LCD_COLOR_WHITE);    // Set the LCD Text Color
+	
+	LCD_DisplayStringLine(LINE(7), "Sensor Off");
+	LCD_DisplayStringLine(LINE(8), "Audio  Off");
+	LCD_DisplayStringLine(LINE(9), "Video  Off");
+}
+
+float getRandFloat(float min, float max){
+	float randv;
+	float range;
+	char buf[10];
+	randv = rand();
+	range = max - min;
+	randv = (randv / RAND_MAX) * range + min;
+	sprintf(buf, "%.1f", randv);
+	sscanf(buf, "%f", &randv);
+	return randv;
 }
 
 #ifdef  USE_FULL_ASSERT
